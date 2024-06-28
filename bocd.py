@@ -34,7 +34,7 @@ def bocd(data, model, hazard):
     """
     # 1. Initialize lower triangular matrix representing the posterior as
     #    function of time. Model parameters are initialized in the model class.
-    #    
+    #
     #    When we exponentiate R at the end, exp(-inf) --> 0, which is nice for
     #    visualization.
     #
@@ -42,7 +42,7 @@ def bocd(data, model, hazard):
     log_R       = -np.inf * np.ones((T+1, T+1))
     log_R[0, 0] = 0              # log 0 == 1
     pmean       = np.empty(T)    # Model's predictive mean.
-    pvar        = np.empty(T)    # Model's predictive variance. 
+    pvar        = np.empty(T)    # Model's predictive variance.
     log_message = np.array([0])  # log 0 == 1
     log_H       = np.log(hazard)
     log_1mH     = np.log(1 - hazard)
@@ -54,20 +54,25 @@ def bocd(data, model, hazard):
         # Make model predictions.
         pmean[t-1] = np.sum(np.exp(log_R[t-1, :t]) * model.mean_params[:t])
         pvar[t-1]  = np.sum(np.exp(log_R[t-1, :t]) * model.var_params[:t])
-        
+
         # 3. Evaluate predictive probabilities.
+        # log_pis是个向量，计算当前点x 在各个 run length 下的概率密度
         log_pis = model.log_pred_prob(t, x)
 
         # 4. Calculate growth probabilities.
+        # 增长概率，计算当前点 x 在各个 run length 下的增长概率, log_growth_probs也是个向量
         log_growth_probs = log_pis + log_message + log_1mH
 
         # 5. Calculate changepoint probabilities.
+        # 变点概率，计算当前点是变点的概率，是个标量
         log_cp_prob = logsumexp(log_pis + log_message + log_H)
 
         # 6. Calculate evidence
+        # 结合 4 和 5, 得出新的各个长度下的增长概率
         new_log_joint = np.append(log_cp_prob, log_growth_probs)
 
         # 7. Determine run length distribution.
+        # 归一化，让这些概率的和为1
         log_R[t, :t+1]  = new_log_joint
         log_R[t, :t+1] -= logsumexp(new_log_joint)
 
@@ -85,10 +90,10 @@ def bocd(data, model, hazard):
 
 
 class GaussianUnknownMean:
-    
+
     def __init__(self, mean0, var0, varx):
         """Initialize model.
-        
+
         meanx is unknown; varx is known
         p(meanx) = N(mean0, var0)
         p(x) = N(meanx, varx)
@@ -98,7 +103,7 @@ class GaussianUnknownMean:
         self.varx  = varx
         self.mean_params = np.array([mean0])
         self.prec_params = np.array([1/var0])
-    
+
     def log_pred_prob(self, t, x):
         """Compute predictive probabilities \pi, i.e. the posterior predictive
         for each run length hypothesis.
@@ -107,7 +112,7 @@ class GaussianUnknownMean:
         post_means = self.mean_params[:t]
         post_stds  = np.sqrt(self.var_params[:t])
         return norm(post_means, post_stds).logpdf(x)
-    
+
     def update_params(self, t, x):
         """Upon observing a new datum x at time t, update all run length 
         hypotheses.
@@ -154,15 +159,14 @@ def plot_posterior(T, data, cps, R, pmean, pvar):
     ax1.plot(range(0, T), data)
     ax1.set_xlim([0, T])
     ax1.margins(0)
-    
+
     # Plot predictions.
     ax1.plot(range(0, T), pmean, c='k')
     _2std = 2 * np.sqrt(pvar)
     ax1.plot(range(0, T), pmean - _2std, c='k', ls='--')
     ax1.plot(range(0, T), pmean + _2std, c='k', ls='--')
 
-    ax2.imshow(np.rot90(R), aspect='auto', cmap='gray_r', 
-               norm=LogNorm(vmin=0.0001, vmax=1))
+    ax2.imshow(np.rot90(R), aspect='auto', cmap='gray_r', norm=LogNorm(vmin=0.0001, vmax=1))
     ax2.set_xlim([0, T])
     ax2.margins(0)
 

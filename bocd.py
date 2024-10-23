@@ -82,6 +82,8 @@ def bocd(data, model, hazard):
         # Pass message.
         log_message = new_log_joint
 
+        # print(log_message)
+
     R = np.exp(log_R)
     return R, pmean, pvar
 
@@ -121,8 +123,7 @@ class GaussianUnknownMean:
         new_prec_params  = self.prec_params + (1/self.varx)
         self.prec_params = np.append([1/self.var0], new_prec_params)
         # See eq. 24 in (Murphy 2007).
-        new_mean_params  = (self.mean_params * self.prec_params[:-1] + \
-                            (x / self.varx)) / new_prec_params
+        new_mean_params  = (self.mean_params * self.prec_params[:-1] +  (x / self.varx)) / new_prec_params
         self.mean_params = np.append([self.mean0], new_mean_params)
 
     @property
@@ -166,8 +167,9 @@ def plot_posterior(T, data, cps, R, pmean, pvar):
     ax1.plot(range(0, T), pmean - _2std, c='k', ls='--')
     ax1.plot(range(0, T), pmean + _2std, c='k', ls='--')
 
-    ax2.imshow(np.rot90(R), aspect='auto', cmap='gray_r', norm=LogNorm(vmin=0.0001, vmax=1))
+    ax2.imshow(np.rot90(R), aspect='auto', cmap='gray_r', norm=LogNorm(vmin=0.001, vmax=1))
     ax2.set_xlim([0, T])
+    # ax2.set_ylim([T, 0])
     ax2.margins(0)
 
     for cp in cps:
@@ -180,15 +182,26 @@ def plot_posterior(T, data, cps, R, pmean, pvar):
 
 # -----------------------------------------------------------------------------
 
-if __name__ == '__main__':
-    T      = 1000   # Number of observations.
-    hazard = 1/100  # Constant prior on changepoint probability.
-    mean0  = 0      # The prior mean on the mean parameter.
-    var0   = 2      # The prior variance for mean parameter.
-    varx   = 1      # The known variance of the data.
 
-    data, cps      = generate_data(varx, mean0, var0, T, hazard)
+data2 = [259,179,181,205,184,182,168,192,184,175,152,178,156,183,162,180,168,191,194,209,201,183,197,199,168,165,170,187,178,179,195,186,171,176,191,168,172,170,170,191,199,192,201,185,176,194,184,172,188,201,194,162,196,209,211,191,189,179,171,221,277,277,228,234,227,230,243,278,264,267,258,281,302,278,242,269,279,254,250,249,258,260,264,276,294,284,311,237,276,285,253,278,276,283,255,258,267,265,277,268,254,263,274,272,231,232,259,244,250,242,226,244,235,228,243,223,218,261,218,292,312,299,238,132,79,73,68,73,68,73,85,87,72,64,74,76,66,57,69,67,66,77,61,76,228,360,279,230,246,247,226,223,245,218,237,206,226,204,232,225,247,211,209,208,212,245,220,187,186,208,178,192,190,198,209,180,176,196,190,293,328,325,900,800,367,323,285,265,241,243,262,257,249,206,240,238,232,262,224,221,219,221,222,212,216,212,251,214,241,226,234,248,232,226,246,226,220,240,223,234,216,234,215,263,254,226,243,218,207,209,256,221,238,231,237,222,234,240,250,263,285,253,238,228,220,215,208,196,231,235,207,205,186,217,223,227,179,210,199,215,195,221,194,185,212,217,190,200,205,207,177,197,204,197,176,190,201,195,206,214,159,195,207,198,226,216,192,196,187,194,180,184,192,202,213,155,178,212,176,223,240]
+mean2 = 178
+
+
+if __name__ == '__main__':
+    data = data2
+    mean0 = mean2
+
+    T      = len(data)   # Number of observations.
+    hazard = 1/1000  # Constant prior on changepoint probability.
+    # mean0  = 744      # The prior mean on the mean parameter.
+    var0   = 861      # The prior variance for mean parameter.
+    varx   = 861      # The known variance of the data.
+
+    # data, cps      = generate_data(varx, mean0, var0, T, hazard)
     model          = GaussianUnknownMean(mean0, var0, varx)
     R, pmean, pvar = bocd(data, model, hazard)
 
-    plot_posterior(T, data, cps, R, pmean, pvar)
+    print(pvar)
+
+
+    plot_posterior(T, data, [], R, pmean, pvar)
